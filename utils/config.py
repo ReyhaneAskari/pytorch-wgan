@@ -16,8 +16,10 @@ def parse_args():
     parser.add_argument('--mode', type=str, default='adam_vjp', help='choose between adam, adam_vjp')
     parser.add_argument('--beta_g', type=float, default='0.5', help='beta 1 for the generator')
     parser.add_argument('--beta_d', type=float, default='0.5', help='beta 1 for the discriminator')
-    parser.add_argument('--alpha_g', type=float, default='0.0', help='alpha for the generator')
-    parser.add_argument('--alpha_d', type=float, default='0.0', help='alpha for the discriminator')
+    parser.add_argument('--alpha_g_grad', type=float, default='1.0', help='alpha for the generator grad')
+    parser.add_argument('--alpha_g_vjp', type=float, default='0.0', help='alpha for the generator vjp')
+    parser.add_argument('--alpha_d_grad', type=float, default='1.0', help='alpha for the discriminator grad')
+    parser.add_argument('--alpha_d_vjp', type=float, default='0.0', help='alpha for the discriminator vjp')
     parser.add_argument('--lr_g', type=float, default='0.0002', help='lr for the generator')
     parser.add_argument('--lr_d', type=float, default='0.0002', help='lr for the discriminator')
 

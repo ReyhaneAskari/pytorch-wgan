@@ -100,8 +100,11 @@ class DCGAN_MODEL(object):
                      '_beta_d_' + str(args.beta_d) +
                      '_lr_g_' + str(args.lr_g) +
                      '_lr_d_' + str(args.lr_d) +
-                     '_alpha_d_' + str(args.alpha_d) +
-                     '_alpha_g_' + str(args.alpha_g))
+                     '_alpha_d_vjp_' + str(args.alpha_d_vjp) +
+                     '_alpha_g_vjp_' + str(args.alpha_g_vjp) +
+                     '_alpha_d_grad_' + str(args.alpha_d_grad) +
+                     '_alpha_g_grad_' + str(args.alpha_g_grad)
+                     )
         print(self.name)
         if not os.path.exists(self.name):
             os.makedirs(self.name)
@@ -123,11 +126,13 @@ class DCGAN_MODEL(object):
             self.d_optimizer = optim.VJP_Adam(self.D.parameters(),
                                               lr=args.lr_d,
                                               betas=(args.beta_d, 0.999),
-                                              alpha=args.alpha_d)
+                                              alpha_vjp=args.alpha_d_vjp,
+                                              alpha_grad=args.alpha_d_grad)
             self.g_optimizer = optim.VJP_Adam(self.G.parameters(),
                                               lr=args.lr_g,
                                               betas=(args.beta_g, 0.999),
-                                              alpha=args.alpha_g)
+                                              alpha_vjp=args.alpha_g_vjp,
+                                              alpha_grad=args.alpha_g_grad)
         self.epochs = args.epochs
         self.batch_size = args.batch_size
 
