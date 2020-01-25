@@ -2,8 +2,9 @@ import torch
 import torch.nn as nn
 from torch.autograd import Variable
 import time as t
+import matplotlib
+matplotlib.use('agg')
 import matplotlib.pyplot as plt
-plt.switch_backend('agg')
 import os
 from utils.tensorboard_logger import Logger
 from torchvision import utils

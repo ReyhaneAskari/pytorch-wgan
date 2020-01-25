@@ -3,14 +3,20 @@ import torch.nn as nn
 from torch.autograd import Variable
 import time as t
 import os
+import sys
 from utils.tensorboard_logger import Logger
 from utils.inception_score import get_inception_score
 from itertools import chain
 from torchvision import utils
+from torch.nn.utils import parameters_to_vector
+sys.path.append("..")
+from utils import optim
+
 
 class Generator(torch.nn.Module):
     def __init__(self, channels):
-        super().__init__()
+        # import ipdb; ipdb.set_trace()
+        super(Generator, self).__init__()
         # Filters [1024, 512, 256]
         # Input_dim = 100
         # Output_dim = C (number of channels)
@@ -43,7 +49,7 @@ class Generator(torch.nn.Module):
 
 class Discriminator(torch.nn.Module):
     def __init__(self, channels):
-        super().__init__()
+        super(Discriminator, self).__init__()
         # Filters [256, 512, 1024]
         # Input_dim = channels (Cx64x64)
         # Output_dim = 1
@@ -66,7 +72,9 @@ class Discriminator(torch.nn.Module):
         self.output = nn.Sequential(
             nn.Conv2d(in_channels=1024, out_channels=1, kernel_size=4, stride=1, padding=0),
             # Output 1
-            nn.Sigmoid())
+            # cause changed loss to BCEWithLogitsLoss from BCELoss
+            # nn.Sigmoid()
+            )
 
     def forward(self, x):
         x = self.main_module(x)
@@ -77,15 +85,28 @@ class Discriminator(torch.nn.Module):
         x = self.main_module(x)
         return x.view(-1, 1024*4*4)
 
+
 class DCGAN_MODEL(object):
     def __init__(self, args):
         print("DCGAN model initalization.")
         self.G = Generator(args.channels)
         self.D = Discriminator(args.channels)
         self.C = args.channels
+        self.mode = args.mode
 
+        self.name = ('res/_mode_' + str(args.mode) +
+                     '_beta_g_' + str(args.beta_g) +
+                     '_beta_g_' + str(args.beta_g) +
+                     '_beta_d_' + str(args.beta_d) +
+                     '_lr_g_' + str(args.lr_g) +
+                     '_lr_d_' + str(args.lr_d) +
+                     '_alpha_d_' + str(args.alpha_d) +
+                     '_alpha_g_' + str(args.alpha_g))
+        print(self.name)
+        if not os.path.exists(self.name):
+            os.makedirs(self.name)
         # binary cross entropy loss and optimizer
-        self.loss = nn.BCELoss()
+        self.loss = nn.BCEWithLogitsLoss()
 
         self.cuda = "False"
         self.cuda_index = 0
@@ -93,9 +114,20 @@ class DCGAN_MODEL(object):
         self.check_cuda(args.cuda)
 
         # Using lower learning rate than suggested by (ADAM authors) lr=0.0002  and Beta_1 = 0.5 instead od 0.9 works better [Radford2015]
-        self.d_optimizer = torch.optim.Adam(self.D.parameters(), lr=0.0002, betas=(0.5, 0.999))
-        self.g_optimizer = torch.optim.Adam(self.G.parameters(), lr=0.0002, betas=(0.5, 0.999))
-
+        if self.mode == 'adam':
+            self.d_optimizer = torch.optim.Adam(self.D.parameters(), lr=0.0002,
+                                                betas=(0.5, 0.999))
+            self.g_optimizer = torch.optim.Adam(self.G.parameters(), lr=0.0002,
+                                                betas=(0.5, 0.999))
+        elif self.mode == 'adam_vjp':
+            self.d_optimizer = optim.VJP_Adam(self.D.parameters(),
+                                              lr=args.lr_d,
+                                              betas=(args.beta_d, 0.999),
+                                              alpha=args.alpha_d)
+            self.g_optimizer = optim.VJP_Adam(self.G.parameters(),
+                                              lr=args.lr_g,
+                                              betas=(args.beta_g, 0.999),
+                                              alpha=args.alpha_g)
         self.epochs = args.epochs
         self.batch_size = args.batch_size
 
@@ -109,15 +141,16 @@ class DCGAN_MODEL(object):
             self.cuda = True
             self.D.cuda(self.cuda_index)
             self.G.cuda(self.cuda_index)
-            self.loss = nn.BCELoss().cuda(self.cuda_index)
+            self.loss = nn.BCEWithLogitsLoss().cuda(self.cuda_index)
             print("Cuda enabled flag: ")
             print(self.cuda)
-
 
     def train(self, train_loader):
         self.t_begin = t.time()
         generator_iter = 0
-        #self.file = open("inception_score_graph.txt", "w")
+        self.file = open("inception_score_graph.txt", "w")
+        dis_params_flatten = parameters_to_vector(self.D.parameters())
+        gen_params_flatten = parameters_to_vector(self.G.parameters())
 
         for epoch in range(self.epochs):
             self.epoch_start_time = t.time()
@@ -138,11 +171,10 @@ class DCGAN_MODEL(object):
                     images, z = Variable(images), Variable(z)
                     real_labels, fake_labels = Variable(real_labels), Variable(fake_labels)
 
-
                 # Train discriminator
                 # Compute BCE_Loss using real images
                 outputs = self.D(images)
-                d_loss_real = self.loss(outputs, real_labels)
+                d_loss_real = self.loss(outputs.squeeze(), real_labels)
                 real_score = outputs
 
                 # Compute BCE Loss using fake images
@@ -152,14 +184,34 @@ class DCGAN_MODEL(object):
                     z = Variable(torch.randn(self.batch_size, 100, 1, 1))
                 fake_images = self.G(z)
                 outputs = self.D(fake_images)
-                d_loss_fake = self.loss(outputs, fake_labels)
+                d_loss_fake = self.loss(outputs.squeeze(), fake_labels)
                 fake_score = outputs
 
                 # Optimize discriminator
                 d_loss = d_loss_real + d_loss_fake
-                self.D.zero_grad()
-                d_loss.backward()
-                self.d_optimizer.step()
+                if self.mode == 'adam':
+                    self.D.zero_grad()
+                    d_loss.backward()
+                    self.d_optimizer.step()
+                elif self.mode == 'adam_vjp':
+                    gradsG = torch.autograd.grad(
+                        outputs=d_loss, inputs=(self.G.parameters()),
+                        create_graph=True)
+                    for p, g in zip(self.G.parameters(), gradsG):
+                        p.grad = g
+                    gradsD = torch.autograd.grad(
+                        outputs=d_loss, inputs=(self.D.parameters()),
+                        create_graph=True)
+                    for p, g in zip(self.D.parameters(), gradsD):
+                        p.grad = g
+                    gen_params_flatten_prev = gen_params_flatten + 0.0
+                    gen_params_flatten = parameters_to_vector(self.G.parameters()) + 0.0
+                    grad_gen_params_flatten = optim.parameters_grad_to_vector(self.G.parameters())
+                    delta_gen_params_flatten = gen_params_flatten - gen_params_flatten_prev
+                    vjp_dis = torch.autograd.grad(
+                        grad_gen_params_flatten, self.D.parameters(),
+                        grad_outputs=delta_gen_params_flatten)
+                    self.d_optimizer.step(vjps=vjp_dis)
 
                 # Train generator
                 # Compute loss with fake images
@@ -169,37 +221,55 @@ class DCGAN_MODEL(object):
                     z = Variable(torch.randn(self.batch_size, 100, 1, 1))
                 fake_images = self.G(z)
                 outputs = self.D(fake_images)
-                g_loss = self.loss(outputs, real_labels)
+                g_loss = self.loss(outputs.squeeze(), real_labels)
 
                 # Optimize generator
-                self.D.zero_grad()
-                self.G.zero_grad()
-                g_loss.backward()
-                self.g_optimizer.step()
-                generator_iter += 1
+                if self.mode == 'adam':
+                    self.D.zero_grad()
+                    self.G.zero_grad()
+                    g_loss.backward()
+                    self.g_optimizer.step()
+                elif self.mode == 'adam_vjp':
+                    gradsG = torch.autograd.grad(
+                        outputs=g_loss, inputs=(self.G.parameters()),
+                        create_graph=True)
+                    for p, g in zip(self.G.parameters(), gradsG):
+                        p.grad = g
+                    gradsD = torch.autograd.grad(
+                        outputs=g_loss, inputs=(self.D.parameters()),
+                        create_graph=True)
+                    for p, g in zip(self.D.parameters(), gradsD):
+                        p.grad = g
 
+                    dis_params_flatten_prev = dis_params_flatten + 0.0
+                    dis_params_flatten = parameters_to_vector(self.D.parameters()) + 0.0
+                    grad_dis_params_flatten = optim.parameters_grad_to_vector(self.D.parameters())
+                    delta_dis_params_flatten = dis_params_flatten - dis_params_flatten_prev
+                    vjp_gen = torch.autograd.grad(
+                        grad_dis_params_flatten, self.G.parameters(),
+                        grad_outputs=delta_dis_params_flatten)
+                    self.g_optimizer.step(vjps=vjp_gen)
+
+                generator_iter += 1
 
                 if generator_iter % 1000 == 0:
                     # Workaround because graphic card memory can't store more than 800+ examples in memory for generating image
                     # Therefore doing loop and generating 800 examples and stacking into list of samples to get 8000 generated images
                     # This way Inception score is more correct since there are different generated examples from every class of Inception model
-                    # sample_list = []
-                    # for i in range(10):
-                    #     z = Variable(torch.randn(800, 100, 1, 1)).cuda(self.cuda_index)
-                    #     samples = self.G(z)
-                    #     sample_list.append(samples.data.cpu().numpy())
-                    #
-                    # # Flattening list of lists into one list of numpy arrays
-                    # new_sample_list = list(chain.from_iterable(sample_list))
-                    # print("Calculating Inception Score over 8k generated images")
-                    # # Feeding list of numpy arrays
-                    # inception_score = get_inception_score(new_sample_list, cuda=True, batch_size=32,
-                    #                                       resize=True, splits=10)
+                    sample_list = []
+                    for i in range(10):
+                        z = Variable(torch.randn(800, 100, 1, 1)).cuda(self.cuda_index)
+                        samples = self.G(z)
+                        sample_list.append(samples.data.cpu().numpy())
+
+                    # Flattening list of lists into one list of numpy arrays
+                    new_sample_list = list(chain.from_iterable(sample_list))
+                    print("Calculating Inception Score over 8k generated images")
+                    # Feeding list of numpy arrays
+                    inception_score = get_inception_score(new_sample_list, cuda=True, batch_size=32,
+                                                          resize=True, splits=10)
                     print('Epoch-{}'.format(epoch + 1))
                     self.save_model()
-
-                    if not os.path.exists('training_result_images/'):
-                        os.makedirs('training_result_images/')
 
                     # Denormalize images and save them in grid 8x8
                     z = Variable(torch.randn(800, 100, 1, 1)).cuda(self.cuda_index)
@@ -207,29 +277,28 @@ class DCGAN_MODEL(object):
                     samples = samples.mul(0.5).add(0.5)
                     samples = samples.data.cpu()[:64]
                     grid = utils.make_grid(samples)
-                    utils.save_image(grid, 'training_result_images/img_generatori_iter_{}.png'.format(str(generator_iter).zfill(3)))
+                    utils.save_image(grid, self.name + '/iter_{}_inception_{}_.png'.format(str(generator_iter).zfill(3), str(inception_score)))
 
                     time = t.time() - self.t_begin
-                    #print("Inception score: {}".format(inception_score))
+                    print("Inception score: {}".format(inception_score))
                     print("Generator iter: {}".format(generator_iter))
                     print("Time {}".format(time))
 
                     # Write to file inception_score, gen_iters, time
-                    #output = str(generator_iter) + " " + str(time) + " " + str(inception_score[0]) + "\n"
-                    #self.file.write(output)
-
+                    output = str(generator_iter) + " " + str(time) + " " + str(inception_score[0]) + "\n"
+                    self.file.write(output)
 
                 if ((i + 1) % 100) == 0:
                     print("Epoch: [%2d] [%4d/%4d] D_loss: %.8f, G_loss: %.8f" %
-                          ((epoch + 1), (i + 1), train_loader.dataset.__len__() // self.batch_size, d_loss.data[0], g_loss.data[0]))
+                          ((epoch + 1), (i + 1), train_loader.dataset.__len__() // self.batch_size, d_loss.item(), g_loss.item()))
 
                     z = Variable(torch.randn(self.batch_size, 100, 1, 1).cuda(self.cuda_index))
 
                     # TensorBoard logging
                     # Log the scalar values
                     info = {
-                        'd_loss': d_loss.data[0],
-                        'g_loss': g_loss.data[0]
+                        'd_loss': d_loss.item(),
+                        'g_loss': g_loss.item()
                     }
 
                     for tag, value in info.items():
@@ -249,7 +318,6 @@ class DCGAN_MODEL(object):
 
                     for tag, images in info.items():
                         self.logger.image_summary(tag, images, generator_iter)
-
 
         self.t_end = t.time()
         print('Time of training-{}'.format((self.t_end - self.t_begin)))
@@ -288,9 +356,9 @@ class DCGAN_MODEL(object):
         return x.data.cpu().numpy()
 
     def save_model(self):
-        torch.save(self.G.state_dict(), './generator.pkl')
-        torch.save(self.D.state_dict(), './discriminator.pkl')
-        print('Models save to ./generator.pkl & ./discriminator.pkl ')
+        torch.save(self.G.state_dict(), self.name + '/generator.pkl')
+        torch.save(self.D.state_dict(), self.name + '/discriminator.pkl')
+        print('Models save to generator.pkl & discriminator.pkl ')
 
     def load_model(self, D_model_filename, G_model_filename):
         D_model_path = os.path.join(os.getcwd(), D_model_filename)
@@ -319,12 +387,12 @@ class DCGAN_MODEL(object):
         alpha = 1.0 / float(number_int + 1)
         print(alpha)
         for i in range(1, number_int + 1):
-            z_intp.data = z1*alpha + z2*(1.0 - alpha)
+            z_intp.data = z1 * alpha + z2 * (1.0 - alpha)
             alpha += alpha
             fake_im = self.G(z_intp)
-            fake_im = fake_im.mul(0.5).add(0.5) #denormalize
-            images.append(fake_im.view(self.C,32,32).data.cpu())
+            fake_im = fake_im.mul(0.5).add(0.5)  # denormalize
+            images.append(fake_im.view(self.C, 32, 32).data.cpu())
 
-        grid = utils.make_grid(images, nrow=number_int )
+        grid = utils.make_grid(images, nrow=number_int)
         utils.save_image(grid, 'interpolated_images/interpolated_{}.png'.format(str(number).zfill(3)))
         print("Saved interpolated images to interpolated_images/interpolated_{}.".format(str(number).zfill(3)))
