@@ -67,7 +67,7 @@ class VJP_Adam(optim.Optimizer):
                 if p.grad is None:
                     continue
                 # vjp_new = p.grad.data.norm(2) * vjp / (vjp.norm(2) + 1e-5)
-                grad = group['alpha_grad'] * p.grad.data + vjp * group['alpha_vjp']
+                grad = group['alpha_grad'] * p.grad.data - vjp * group['alpha_vjp']
                 if grad.is_sparse:
                     raise RuntimeError('Adam does not support sparse gradients, please consider SparseAdam instead')
                 amsgrad = group['amsgrad']

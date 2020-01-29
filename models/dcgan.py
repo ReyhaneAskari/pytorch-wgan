@@ -157,6 +157,19 @@ class DCGAN_MODEL(object):
         dis_params_flatten = parameters_to_vector(self.D.parameters())
         gen_params_flatten = parameters_to_vector(self.G.parameters())
 
+        # just to fill the empty grad buffers
+        if self.cuda:
+            z = Variable(torch.randn(self.batch_size, 100, 1, 1)).cuda(self.cuda_index)
+        else:
+            z = Variable(torch.randn(self.batch_size, 100, 1, 1))
+        fake_images = self.G(z)
+        outputs = self.D(fake_images)
+        fake_labels = torch.zeros(self.batch_size)
+        fake_labels = Variable(fake_labels).cuda(self.cuda_index)
+        d_loss_fake = self.loss(outputs.squeeze(), fake_labels)
+        (0.0 * d_loss_fake).backward(create_graph=True)
+        d_loss_fake = 0.0
+
         for epoch in range(self.epochs):
             self.epoch_start_time = t.time()
 
@@ -199,11 +212,11 @@ class DCGAN_MODEL(object):
                     d_loss.backward()
                     self.d_optimizer.step()
                 elif self.mode == 'adam_vjp':
-                    gradsG = torch.autograd.grad(
-                        outputs=d_loss, inputs=(self.G.parameters()),
-                        create_graph=True)
-                    for p, g in zip(self.G.parameters(), gradsG):
-                        p.grad = g
+                    # gradsG = torch.autograd.grad(
+                    #     outputs=d_loss, inputs=(self.G.parameters()),
+                    #     create_graph=True)
+                    # for p, g in zip(self.G.parameters(), gradsG):
+                    #     p.grad = g
                     gradsD = torch.autograd.grad(
                         outputs=d_loss, inputs=(self.D.parameters()),
                         create_graph=True)
@@ -240,11 +253,11 @@ class DCGAN_MODEL(object):
                         create_graph=True)
                     for p, g in zip(self.G.parameters(), gradsG):
                         p.grad = g
-                    gradsD = torch.autograd.grad(
-                        outputs=g_loss, inputs=(self.D.parameters()),
-                        create_graph=True)
-                    for p, g in zip(self.D.parameters(), gradsD):
-                        p.grad = g
+                    # gradsD = torch.autograd.grad(
+                    #     outputs=g_loss, inputs=(self.D.parameters()),
+                    #     create_graph=True)
+                    # for p, g in zip(self.D.parameters(), gradsD):
+                    #     p.grad = g
 
                     dis_params_flatten_prev = dis_params_flatten + 0.0
                     dis_params_flatten = parameters_to_vector(self.D.parameters()) + 0.0
