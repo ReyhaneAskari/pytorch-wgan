@@ -26,7 +26,12 @@ def main(args):
     #feature_extraction = FeatureExtractionTest(train_loader, test_loader, args.cuda, args.batch_size)
 
     # Start model training
-    if args.is_train == 'True':
+    if args.is_train == 'True' and args.load_model == 'False':
+        model.train(train_loader)
+
+    # Continue train with loading stats
+    elif args.load_model == 'True':
+        model.load_model(args.load_D, args.load_G)
         model.train(train_loader)
 
     # start evaluating on test data
