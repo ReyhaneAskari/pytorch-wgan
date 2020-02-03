@@ -212,11 +212,6 @@ class DCGAN_MODEL(object):
                     d_loss.backward()
                     self.d_optimizer.step()
                 elif self.mode == 'adam_vjp':
-                    # gradsG = torch.autograd.grad(
-                    #     outputs=d_loss, inputs=(self.G.parameters()),
-                    #     create_graph=True)
-                    # for p, g in zip(self.G.parameters(), gradsG):
-                    #     p.grad = g
                     gradsD = torch.autograd.grad(
                         outputs=d_loss, inputs=(self.D.parameters()),
                         create_graph=True)
@@ -239,8 +234,10 @@ class DCGAN_MODEL(object):
                     z = Variable(torch.randn(self.batch_size, 100, 1, 1))
                 fake_images = self.G(z)
                 outputs = self.D(fake_images)
-                g_loss = self.loss(outputs.squeeze(), real_labels)
-
+                # non-zero_sum
+                # g_loss = self.loss(outputs.squeeze(), real_labels)
+                # zer_sum:
+                g_loss = - self.loss(outputs.squeeze(), fake_labels)
                 # Optimize generator
                 if self.mode == 'adam':
                     self.D.zero_grad()
