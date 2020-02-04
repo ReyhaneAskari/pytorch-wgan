@@ -1,9 +1,40 @@
 #!/usr/bin/env bash
-# baseline:
-# leto40: python main.py --dataroot datasets/cifar --epochs 100 --beta_g 0.5 --beta_d 0.5 --lr_g 0.0002 --lr_d 0.0001 --alpha_d_vjp 0.0  --alpha_g_vjp 0.0 --load_model True --load_G res/__mode_adam_vjp_beta_g_0.5_beta_g_0.5_beta_d_0.5_lr_g_0.0002_lr_d_0.0001_alpha_d_vjp_0.0_alpha_g_vjp_0.0_alpha_d_grad_1.0_alpha_g_grad_1.0/generator.pkl --load_D res/__mode_adam_vjp_beta_g_0.5_beta_g_0.5_beta_d_0.5_lr_g_0.0002_lr_d_0.0001_alpha_d_vjp_0.0_alpha_g_vjp_0.0_alpha_d_grad_1.0_alpha_g_grad_1.0/discriminator.pkl
 
+# non-zero_sim best:
+# python main.py --dataroot datasets/cifar --epochs 120 --beta_g 0.5 --beta_d 0.5 --lr_g 0.0002 --lr_d 0.0001 --alpha_d_vjp 0.3  --alpha_g_vjp 0.0 --load_model True --load_G res/best/generator.pkl --load_D res/best/discriminator.pkl
 
-# leto22: python main.py --dataroot datasets/cifar --epochs 100 --beta_g 0.5 --beta_d 0.5 --lr_g 0.0002 --lr_d 0.0001 --alpha_d_vjp 0.3  --alpha_g_vjp 0.0 --load_model True --load_G res/__mode_adam_vjp_beta_g_0.5_beta_g_0.5_beta_d_0.5_lr_g_0.0002_lr_d_0.0001_alpha_d_vjp_0.3_alpha_g_vjp_0.0_alpha_d_grad_1.0_alpha_g_grad_1.0/generator.pkl --load_D res/__mode_adam_vjp_beta_g_0.5_beta_g_0.5_beta_d_0.5_lr_g_0.0002_lr_d_0.0001_alpha_d_vjp_0.3_alpha_g_vjp_0.0_alpha_d_grad_1.0_alpha_g_grad_1.0/discriminator.pkl
+python main.py --dataroot datasets/cifar --epochs 10 --beta_g 0.5 --beta_d 0.0 --lr_g 0.0001 --lr_d 0.0001 --alpha_d_vjp 0.3 --alpha_g_vjp 0.0
+python main.py --dataroot datasets/cifar --epochs 10 --beta_g 0.5 --beta_d -0.5 --lr_g 0.0001 --lr_d 0.0001 --alpha_d_vjp 0.3 --alpha_g_vjp 0.0
+python main.py --dataroot datasets/cifar --epochs 10 --beta_g 0.5 --beta_d 0.5 --lr_g 0.0001 --lr_d 0.0001 --alpha_d_vjp 0.3 --alpha_g_vjp 0.0
+python main.py --dataroot datasets/cifar --epochs 10 --beta_g 0.5 --beta_d -0.1 --lr_g 0.0001 --lr_d 0.0001 --alpha_d_vjp 0.3 --alpha_g_vjp 0.0
+python main.py --dataroot datasets/cifar --epochs 10 --beta_g 0.5 --beta_d 0.1 --lr_g 0.0001 --lr_d 0.0001 --alpha_d_vjp 0.3 --alpha_g_vjp 0.0
 
-python main.py --dataroot datasets/cifar --epochs 100 --beta_g 0.5 --beta_d 0.5 --lr_g 0.0002 --lr_d 0.0001 --alpha_d_vjp 0.3  --alpha_g_vjp 0.1 --load_model True --load_G res/__mode_adam_vjp_beta_g_0.5_beta_g_0.5_beta_d_0.5_lr_g_0.0002_lr_d_0.0001_alpha_d_vjp_0.3_alpha_g_vjp_0.1_alpha_d_grad_1.0_alpha_g_grad_1.0/generator.pkl --load_D res/__mode_adam_vjp_beta_g_0.5_beta_g_0.5_beta_d_0.5_lr_g_0.0002_lr_d_0.0001_alpha_d_vjp_0.3_alpha_g_vjp_0.1_alpha_d_grad_1.0_alpha_g_grad_1.0/discriminator.pkl
-python main.py --dataroot datasets/cifar --epochs 100 --beta_g 0.5 --beta_d 0.5 --lr_g 0.0002 --lr_d 0.0001 --alpha_d_vjp 0.6  --alpha_g_vjp 0.0 --load_model True --load_G res/__mode_adam_vjp_beta_g_0.5_beta_g_0.5_beta_d_0.5_lr_g_0.0002_lr_d_0.0001_alpha_d_vjp_0.6_alpha_g_vjp_0.0_alpha_d_grad_1.0_alpha_g_grad_1.0/generator.pkl --load_D res/__mode_adam_vjp_beta_g_0.5_beta_g_0.5_beta_d_0.5_lr_g_0.0002_lr_d_0.0001_alpha_d_vjp_0.6_alpha_g_vjp_0.0_alpha_d_grad_1.0_alpha_g_grad_1.0/discriminator.pkl
+python main.py --dataroot datasets/cifar --epochs 10 --beta_g 0.5 --beta_d 0.0 --lr_g 0.0002 --lr_d 0.0001 --alpha_d_vjp 0.3 --alpha_g_vjp 0.0
+python main.py --dataroot datasets/cifar --epochs 10 --beta_g 0.5 --beta_d -0.5 --lr_g 0.0002 --lr_d 0.0001 --alpha_d_vjp 0.3 --alpha_g_vjp 0.0
+python main.py --dataroot datasets/cifar --epochs 10 --beta_g 0.5 --beta_d 0.5 --lr_g 0.0002 --lr_d 0.0001 --alpha_d_vjp 0.3 --alpha_g_vjp 0.0
+python main.py --dataroot datasets/cifar --epochs 10 --beta_g 0.5 --beta_d -0.1 --lr_g 0.0002 --lr_d 0.0001 --alpha_d_vjp 0.3 --alpha_g_vjp 0.0
+python main.py --dataroot datasets/cifar --epochs 10 --beta_g 0.5 --beta_d +0.1 --lr_g 0.0002 --lr_d 0.0001 --alpha_d_vjp 0.3 --alpha_g_vjp 0.0
+
+# python main.py --dataroot datasets/cifar --epochs 10 --beta_g 0.5 --beta_d +0.0 --lr_g 0.0002 --lr_d 0.0001 --alpha_d_vjp 0.3  --alpha_g_vjp 0.001
+# python main.py --dataroot datasets/cifar --epochs 10 --beta_g 0.5 --beta_d -0.5 --lr_g 0.0002 --lr_d 0.0001 --alpha_d_vjp 0.3  --alpha_g_vjp 0.001
+# python main.py --dataroot datasets/cifar --epochs 10 --beta_g 0.5 --beta_d +0.5 --lr_g 0.0002 --lr_d 0.0001 --alpha_d_vjp 0.3  --alpha_g_vjp 0.001
+# python main.py --dataroot datasets/cifar --epochs 10 --beta_g 0.5 --beta_d -0.1 --lr_g 0.0002 --lr_d 0.0001 --alpha_d_vjp 0.3  --alpha_g_vjp 0.001
+# python main.py --dataroot datasets/cifar --epochs 10 --beta_g 0.5 --beta_d +0.1 --lr_g 0.0002 --lr_d 0.0001 --alpha_d_vjp 0.3  --alpha_g_vjp 0.001
+
+# python main.py --dataroot datasets/cifar --epochs 10 --beta_g 0.5 --beta_d +0.0 --lr_g 0.0001 --lr_d 0.0001 --alpha_d_vjp 0.3  --alpha_g_vjp 0.001
+# python main.py --dataroot datasets/cifar --epochs 10 --beta_g 0.5 --beta_d -0.5 --lr_g 0.0001 --lr_d 0.0001 --alpha_d_vjp 0.3  --alpha_g_vjp 0.001
+# python main.py --dataroot datasets/cifar --epochs 10 --beta_g 0.5 --beta_d +0.5 --lr_g 0.0001 --lr_d 0.0001 --alpha_d_vjp 0.3  --alpha_g_vjp 0.001
+# python main.py --dataroot datasets/cifar --epochs 10 --beta_g 0.5 --beta_d -0.1 --lr_g 0.0001 --lr_d 0.0001 --alpha_d_vjp 0.3  --alpha_g_vjp 0.001
+# python main.py --dataroot datasets/cifar --epochs 10 --beta_g 0.5 --beta_d +0.1 --lr_g 0.0001 --lr_d 0.0001 --alpha_d_vjp 0.3  --alpha_g_vjp 0.001
+
+# python main.py --dataroot datasets/cifar --epochs 10 --beta_g 0.5 --beta_d +0.0 --lr_g 0.0002 --lr_d 0.0001 --alpha_d_vjp 0.35  --alpha_g_vjp 0.0
+# python main.py --dataroot datasets/cifar --epochs 10 --beta_g 0.5 --beta_d -0.5 --lr_g 0.0002 --lr_d 0.0001 --alpha_d_vjp 0.35  --alpha_g_vjp 0.0
+# python main.py --dataroot datasets/cifar --epochs 10 --beta_g 0.5 --beta_d +0.5 --lr_g 0.0002 --lr_d 0.0001 --alpha_d_vjp 0.35  --alpha_g_vjp 0.0
+# python main.py --dataroot datasets/cifar --epochs 10 --beta_g 0.5 --beta_d -0.1 --lr_g 0.0002 --lr_d 0.0001 --alpha_d_vjp 0.35  --alpha_g_vjp 0.0
+# python main.py --dataroot datasets/cifar --epochs 10 --beta_g 0.5 --beta_d +0.1 --lr_g 0.0002 --lr_d 0.0001 --alpha_d_vjp 0.35  --alpha_g_vjp 0.0
+
+# python main.py --dataroot datasets/cifar --epochs 10 --beta_g 0.5 --beta_d +0.0 --lr_g 0.0001 --lr_d 0.0001 --alpha_d_vjp 0.35  --alpha_g_vjp 0.0
+# python main.py --dataroot datasets/cifar --epochs 10 --beta_g 0.5 --beta_d -0.5 --lr_g 0.0001 --lr_d 0.0001 --alpha_d_vjp 0.35  --alpha_g_vjp 0.0
+# python main.py --dataroot datasets/cifar --epochs 10 --beta_g 0.5 --beta_d +0.5 --lr_g 0.0001 --lr_d 0.0001 --alpha_d_vjp 0.35  --alpha_g_vjp 0.0
+# python main.py --dataroot datasets/cifar --epochs 10 --beta_g 0.5 --beta_d -0.1 --lr_g 0.0001 --lr_d 0.0001 --alpha_d_vjp 0.35  --alpha_g_vjp 0.0
+# python main.py --dataroot datasets/cifar --epochs 10 --beta_g 0.5 --beta_d +0.1 --lr_g 0.0001 --lr_d 0.0001 --alpha_d_vjp 0.35  --alpha_g_vjp 0.0

@@ -6,9 +6,11 @@ import os
 import sys
 from utils.tensorboard_logger import Logger
 from utils.inception_score import get_inception_score
+from inception_score import calc_inception_score
 from itertools import chain
 from torchvision import utils
 from torch.nn.utils import parameters_to_vector
+import numpy as np
 sys.path.append("..")
 from utils import optim
 
@@ -169,7 +171,9 @@ class DCGAN_MODEL(object):
         d_loss_fake = self.loss(outputs.squeeze(), fake_labels)
         (0.0 * d_loss_fake).backward(create_graph=True)
         d_loss_fake = 0.0
-
+        best_inception_score = 0.0
+        d_loss_list = []
+        g_loss_list = []
         for epoch in range(self.epochs):
             self.epoch_start_time = t.time()
 
@@ -235,9 +239,9 @@ class DCGAN_MODEL(object):
                 fake_images = self.G(z)
                 outputs = self.D(fake_images)
                 # non-zero_sum
-                # g_loss = self.loss(outputs.squeeze(), real_labels)
+                g_loss = self.loss(outputs.squeeze(), real_labels)
                 # zer_sum:
-                g_loss = - self.loss(outputs.squeeze(), fake_labels)
+                # g_loss = - self.loss(outputs.squeeze(), fake_labels)
                 # Optimize generator
                 if self.mode == 'adam':
                     self.D.zero_grad()
@@ -250,11 +254,6 @@ class DCGAN_MODEL(object):
                         create_graph=True)
                     for p, g in zip(self.G.parameters(), gradsG):
                         p.grad = g
-                    # gradsD = torch.autograd.grad(
-                    #     outputs=g_loss, inputs=(self.D.parameters()),
-                    #     create_graph=True)
-                    # for p, g in zip(self.D.parameters(), gradsD):
-                    #     p.grad = g
 
                     dis_params_flatten_prev = dis_params_flatten + 0.0
                     dis_params_flatten = parameters_to_vector(self.D.parameters()) + 0.0
@@ -284,7 +283,10 @@ class DCGAN_MODEL(object):
                     inception_score = get_inception_score(new_sample_list, cuda=True, batch_size=32,
                                                           resize=True, splits=10)
                     print('Epoch-{}'.format(epoch + 1))
-                    self.save_model()
+                    print(inception_score)
+                    if inception_score >= best_inception_score:
+                        best_inception_score = inception_score
+                        self.save_model()
 
                     # Denormalize images and save them in grid 8x8
                     z = Variable(torch.randn(800, 100, 1, 1)).cuda(self.cuda_index)
@@ -304,6 +306,8 @@ class DCGAN_MODEL(object):
                     self.file.write(output)
 
                 if ((i + 1) % 100) == 0:
+                    d_loss_list += [d_loss.item()]
+                    g_loss_list += [g_loss.item()]
                     print("Epoch: [%2d] [%4d/%4d] D_loss: %.8f, G_loss: %.8f" %
                           ((epoch + 1), (i + 1), train_loader.dataset.__len__() // self.batch_size, d_loss.item(), g_loss.item()))
 
@@ -336,20 +340,33 @@ class DCGAN_MODEL(object):
 
         self.t_end = t.time()
         print('Time of training-{}'.format((self.t_end - self.t_begin)))
-        #self.file.close()
 
         # Save the trained parameters
-        self.save_model()
+        self.save_final_model()
+        np.save(self.name + '/d_loss', np.array(d_loss_list))
+        np.save(self.name + '/g_loss', np.array(g_loss_list))
+        self.evaluate(
+            train_loader, self.name + '/discriminator.pkl',
+            self.name + '/generator.pkl')
 
     def evaluate(self, test_loader, D_model_path, G_model_path):
         self.load_model(D_model_path, G_model_path)
+        self.G.eval()
+        all_fake = []
+        for i in range(10):
+            z = Variable(torch.randn(800, 100, 1, 1)).cuda(self.cuda_index)
+            fake = self.G(z)
+            all_fake += [fake]
+        all_fake = torch.cat(all_fake, 0)
+        inception_score = calc_inception_score((all_fake.cpu().data.numpy() + 1.0) * 128)
+        print(inception_score)
         z = Variable(torch.randn(self.batch_size, 100, 1, 1)).cuda(self.cuda_index)
         samples = self.G(z)
         samples = samples.mul(0.5).add(0.5)
         samples = samples.data.cpu()
         grid = utils.make_grid(samples)
         print("Grid of 8x8 images saved to 'dgan_model_image.png'.")
-        utils.save_image(grid, 'dgan_model_image.png')
+        utils.save_image(grid, self.name + '/best_inception_score' + str(inception_score) + '.png')
 
     def real_images(self, images, number_of_images):
         if (self.C == 3):
@@ -374,6 +391,11 @@ class DCGAN_MODEL(object):
         torch.save(self.G.state_dict(), self.name + '/generator.pkl')
         torch.save(self.D.state_dict(), self.name + '/discriminator.pkl')
         print('Models save to generator.pkl & discriminator.pkl ')
+
+    def save_final_model(self):
+            torch.save(self.G.state_dict(), self.name + '/final_generator.pkl')
+            torch.save(self.D.state_dict(), self.name + '/final_discriminator.pkl')
+            print('Final models save to generator.pkl & discriminator.pkl ')
 
     def load_model(self, D_model_filename, G_model_filename):
         D_model_path = os.path.join(os.getcwd(), D_model_filename)

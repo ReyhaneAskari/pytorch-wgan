@@ -36,10 +36,10 @@ class VJP_Adam(optim.Optimizer):
                 raise ValueError("Invalid learning rate: {}".format(lr))
             if not 0.0 <= eps:
                 raise ValueError("Invalid epsilon value: {}".format(eps))
-            if not 0.0 <= betas[0] < 1.0:
-                raise ValueError("Invalid beta parameter at index 0: {}".format(betas[0]))
-            if not 0.0 <= betas[1] < 1.0:
-                raise ValueError("Invalid beta parameter at index 1: {}".format(betas[1]))
+            # if not 0.0 <= betas[0] < 1.0:
+            #     raise ValueError("Invalid beta parameter at index 0: {}".format(betas[0]))
+            # if not 0.0 <= betas[1] < 1.0:
+            #     raise ValueError("Invalid beta parameter at index 1: {}".format(betas[1]))
             defaults = dict(lr=lr, betas=betas, eps=eps,
                             weight_decay=weight_decay, amsgrad=amsgrad,
                             alpha_vjp=alpha_vjp, alpha_grad=alpha_grad)
